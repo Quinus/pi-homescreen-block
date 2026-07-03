@@ -34,8 +34,8 @@
  *   │                                          │
  *   └──────────────────────────────────────────┘
  *
- * (In a color terminal the headers have a solid blue background and the
- * list items have the terminal background color, so only the headers stand out as blue blocks.)
+ * (In a color terminal the headers have a solid gray background and the
+ * list items have the terminal background color, so only the headers stand out as gray blocks.)
  *
  * When terminal is wide enough, the ASCII logo sits on the left and the
  * resource cards render in a single stacked column on the right. Context
@@ -567,6 +567,7 @@ const PALETTE = {
   bg: "#282c34",
   fg: "#abb2bf",
   blue: "#61afef",
+  header: "#5c6370",
   darkgray: "#282c34",
   gray: "#5c6370",
 };
@@ -599,9 +600,9 @@ interface ThemeColors {
 /**
  * Render a block-style list with no borders, inspired by tmux/lualine segments:
  *
- *   [blue]  Title                       [reset]
- *   [dim]   ■ item 1              [gl]  [reset]
- *   [dim]   ■ item 2              [pr]  [reset]
+ *   [gray]  Title                       [reset]
+ *   [term]  ■ item 1              [gl]  [reset]
+ *   [term]  ■ item 2              [pr]  [reset]
  */
 function renderBlockList(
   title: string,
@@ -610,7 +611,7 @@ function renderBlockList(
 ): string[] {
   if (items.length === 0) return [];
 
-  const headerBg = rgbBg(PALETTE.blue);
+  const headerBg = rgbBg(PALETTE.header);
   const headerFg = rgbFg(PALETTE.bg) + BOLD;
   const itemBg = rgbBg(PALETTE.darkgray);
   const itemFg = rgbFg(PALETTE.fg);
@@ -619,7 +620,7 @@ function renderBlockList(
 
   const lines: string[] = [];
 
-  // Header block: solid blue background, bold dark text.
+  // Header block: solid gray background, bold dark text.
   const titleVisible = ` ${title}`;
   const titlePad = Math.max(0, blockWidth - titleVisible.length);
   lines.push(headerBg + headerFg + titleVisible + " ".repeat(titlePad) + RESET);

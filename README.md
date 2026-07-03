@@ -9,8 +9,8 @@ This extension replaces the default startup header with a branded QUINUS splash 
 - scope badges for global, project, npm-installed and git-installed resources
 
 The resource lists use a solid-block style inspired by tmux and nvim statuslines:
-- section headers have a solid **blue** background
-- list items use the terminal background color so only the headers stand out as blue blocks
+- section headers have a solid **gray** background
+- list items use the terminal background color so only the headers stand out as gray blocks
 - no borders
 
 It also enables `quietStartup` in Pi's settings so the built-in startup resource list does not duplicate the custom header.
@@ -57,7 +57,7 @@ On wide terminals, the ASCII logo sits on the left and the resource blocks rende
 ────────────────────────────────────────────────────────────────────────────────
 ```
 
-(In a color terminal the headers are rendered with a solid blue background;
+(In a color terminal the headers are rendered with a solid gray background;
 the list items use the terminal background color.)
 
 - `/logo` — show or hide the homescreen
