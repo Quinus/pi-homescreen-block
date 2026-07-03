@@ -35,7 +35,7 @@
  *   └──────────────────────────────────────────┘
  *
  * (In a color terminal the headers have a solid blue background and the
- * list items have a dim gray background, matching tmux/lualine blocks.)
+ * list items have the terminal background color, so only the headers stand out as blue blocks.)
  *
  * When terminal is wide enough, the ASCII logo sits on the left and the
  * resource cards render in a single stacked column on the right. Context
@@ -567,7 +567,7 @@ const PALETTE = {
   bg: "#282c34",
   fg: "#abb2bf",
   blue: "#61afef",
-  darkgray: "#3e4451",
+  darkgray: "#282c34",
   gray: "#5c6370",
 };
 
