@@ -1,0 +1,13 @@
+{
+  "name": "pi-homescreen-block",
+  "version": "0.1.0",
+  "description": "Blocky-styled custom homescreen and startup header for pi",
+  "keywords": ["pi-package", "pi-extension"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}
