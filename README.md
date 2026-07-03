@@ -42,18 +42,18 @@ On wide terminals, the ASCII logo sits on the left and the resource blocks rende
                      my-project  using claude-sonnet-4
 
         Skills
-          ■ kotlin-coroutines-flows        [gl]
-          ■ kotlin-multiplatform           [gl]
-          ■ kotlin-springboot              [gl]
+          kotlin-coroutines-flows          [gl]
+          kotlin-multiplatform             [gl]
+          kotlin-springboot                [gl]
 
         Extensions
-          ■ pi-git-changes                 [gl]
-          ■ pi-homescreen-block            [gl]
-          ■ pi-instant-review              [gl]
-          ■ pi-rounded-border-editor       [gl]
-          ■ pi-statusbar                   [gl]
-          ■ pi-tool-collapse               [gl]
-          ■ pi-mcp-adapter                [npm]
+          pi-git-changes                   [gl]
+          pi-homescreen-block              [gl]
+          pi-instant-review                [gl]
+          pi-rounded-border-editor         [gl]
+          pi-statusbar                     [gl]
+          pi-tool-collapse                 [gl]
+          pi-mcp-adapter                  [npm]
 ────────────────────────────────────────────────────────────────────────────────
 ```
 

@@ -21,16 +21,16 @@
  *   │            pi coding agent              │
  *   │                                          │
  *   │   Skills                                 │
- *   │   ■ memory-notes                  [gl]   │
- *   │   ■ kotlin-coroutines-flows       [gl]   │
+ *   │     memory-notes                  [gl]   │
+ *   │     kotlin-coroutines-flows       [gl]   │
  *   │                                          │
  *   │   Extensions                             │
- *   │   ■ pi-homescreen-block           [gl]   │
- *   │   ■ pi-statusbar                  [gl]   │
+ *   │     pi-homescreen-block           [gl]   │
+ *   │     pi-statusbar                  [gl]   │
  *   │                                          │
  *   │   Context                                │
- *   │   ■ AGENTS.md                     [gl]   │
- *   │   ■ AGENTS.md                     [pr]   │
+ *   │     AGENTS.md                     [gl]   │
+ *   │     AGENTS.md                     [pr]   │
  *   │                                          │
  *   └──────────────────────────────────────────┘
  *
@@ -601,8 +601,8 @@ interface ThemeColors {
  * Render a block-style list with no borders, inspired by tmux/lualine segments:
  *
  *   [gray]  Title                       [reset]
- *   [term]  ■ item 1              [gl]  [reset]
- *   [term]  ■ item 2              [pr]  [reset]
+ *   [term]    item 1              [gl]  [reset]
+ *   [term]    item 2              [pr]  [reset]
  */
 function renderBlockList(
   title: string,
@@ -627,7 +627,7 @@ function renderBlockList(
 
   // Item blocks: dim background, light text.
   for (const item of items) {
-    const row = `  ■ ${item.name}`;
+    const row = `  ${item.name}`;
     const rowWidth = visibleWidth(row);
 
     let badge: string;
