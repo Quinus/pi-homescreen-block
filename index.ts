@@ -3,38 +3,39 @@
  *
  * Replaces the built-in startup header with:
  *   1. QUINUS ASCII art logo (left on wide terminals, centered on narrow ones)
- *   2. Bordered extensions section (blocky/heavy corners)
- *   3. Bordered skills section (blocky/heavy corners)
- *   4. Bordered context files section (blocky/heavy corners)
+ *   2. Block-style extensions list (no borders, solid backgrounds)
+ *   3. Block-style skills list (no borders, solid backgrounds)
+ *   4. Block-style context files list (no borders, solid backgrounds)
  *
  * Also sets `quietStartup: true` in settings so Pi's default resource
  * listing doesn't clutter the chat area.
  *
- *   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
- *   ┃                                          ┃
- *   ┃      ██████╗ ██╗   ██╗██╗███╗   ██╗    ┃
- *   ┃    ██╔═══██╗██║   ██║██║████╗  ██║    ┃
- *   ┃    ██║   ██║██║   ██║██║██╔██╗ ██║    ┃
- *   ┃    ██║▄▄ ██║██║   ██║██║██║╚██╗██║    ┃
- *   ┃    ╚██████╔╝╚██████╔╝██║██║ ╚████║    ┃
- *   ┃     ╚══▀▀═╝  ╚═════╝ ╚═╝╚═╝  ╚═══╝    ┃
- *   ┃            pi coding agent              ┃
- *   ┃                                          ┃
- *   ┃  ┏━ Skills ━━━━━━━━━━━━━━━━━━━━━━━━━┓  ┃
- *   ┃  ┃  ■ memory-notes                  ┃  ┃
- *   ┃  ┃  ■ kotlin-coroutines-flows       ┃  ┃
- *   ┃  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ┃
- *   ┃                                          ┃
- *   ┃  ┏━ Extensions ━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
- *   ┃  ┃  ■ pi-homescreen-block             ┃ ┃
- *   ┃  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
- *   ┃                                          ┃
- *   ┃  ┏━ Context ━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
- *   ┃  ┃  ■ AGENTS.md                [gl]   ┃ ┃
- *   ┃  ┃  ■ AGENTS.md                [pr]   ┃ ┃
- *   ┃  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
- *   ┃                                          ┃
- *   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ *   ┌──────────────────────────────────────────┐
+ *   │                                          │
+ *   │      ██████╗ ██╗   ██╗██╗███╗   ██╗    │
+ *   │    ██╔═══██╗██║   ██║██║████╗  ██║    │
+ *   │    ██║   ██║██║   ██║██║██╔██╗ ██║    │
+ *   │    ██║▄▄ ██║██║   ██║██║██║╚██╗██║    │
+ *   │    ╚██████╔╝╚██████╔╝██║██║ ╚████║    │
+ *   │     ╚══▀▀═╝  ╚═════╝ ╚═╝╚═╝  ╚═══╝    │
+ *   │            pi coding agent              │
+ *   │                                          │
+ *   │   Skills                                 │
+ *   │   ■ memory-notes                  [gl]   │
+ *   │   ■ kotlin-coroutines-flows       [gl]   │
+ *   │                                          │
+ *   │   Extensions                             │
+ *   │   ■ pi-homescreen-block           [gl]   │
+ *   │   ■ pi-statusbar                  [gl]   │
+ *   │                                          │
+ *   │   Context                                │
+ *   │   ■ AGENTS.md                     [gl]   │
+ *   │   ■ AGENTS.md                     [pr]   │
+ *   │                                          │
+ *   └──────────────────────────────────────────┘
+ *
+ * (In a color terminal the headers have a solid blue background and the
+ * list items have a dim gray background, matching tmux/lualine blocks.)
  *
  * When terminal is wide enough, the ASCII logo sits on the left and the
  * resource cards render in a single stacked column on the right. Context
@@ -559,7 +560,36 @@ function discoverContextFiles(cwd: string, agentDir: string): ResourceInfo[] {
   return items;
 }
 
-// ── BLOCKY-BORDER RENDERING ─────────────────────────────────────────────────
+// ── STATUSLINE PALETTE ──────────────────────────────────────────────────────
+
+/** Atom One Dark-inspired colors used by the user's tmux and nvim statuslines. */
+const PALETTE = {
+  bg: "#282c34",
+  fg: "#abb2bf",
+  blue: "#61afef",
+  darkgray: "#3e4451",
+  gray: "#5c6370",
+};
+
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+
+function hexToRgb(hex: string): [number, number, number] {
+  const num = parseInt(hex.replace("#", ""), 16);
+  return [(num >> 16) & 0xff, (num >> 8) & 0xff, num & 0xff];
+}
+
+function rgbBg(hex: string): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `\x1b[48;2;${r};${g};${b}m`;
+}
+
+function rgbFg(hex: string): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `\x1b[38;2;${r};${g};${b}m`;
+}
+
+// ── BLOCK-STYLE LIST RENDERING ──────────────────────────────────────────────
 
 interface ThemeColors {
   fg: (color: string, text: string) => string;
@@ -567,64 +597,61 @@ interface ThemeColors {
 }
 
 /**
- * Render a bordered list box with BLOCKY/HEAVY corners:
+ * Render a block-style list with no borders, inspired by tmux/lualine segments:
  *
- *   ┏━ Title ━━━━━━━━━━━━━━━━━━━┓
- *   ┃  ■ item 1            [gl] ┃
- *   ┃  ■ item 2            [pr] ┃
- *   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ *   [blue]  Title                       [reset]
+ *   [dim]   ■ item 1              [gl]  [reset]
+ *   [dim]   ■ item 2              [pr]  [reset]
  */
-function renderBorderedList(
-  theme: ThemeColors,
+function renderBlockList(
   title: string,
   items: ResourceInfo[],
-  boxWidth: number,
-  titleColor: string = "accent",
-  bulletColor: string = "dim",
+  blockWidth: number,
 ): string[] {
   if (items.length === 0) return [];
 
-  const innerWidth = boxWidth - 2;
-  const displayItems = items;
+  const headerBg = rgbBg(PALETTE.blue);
+  const headerFg = rgbFg(PALETTE.bg) + BOLD;
+  const itemBg = rgbBg(PALETTE.darkgray);
+  const itemFg = rgbFg(PALETTE.fg);
+  const dimBadgeFg = rgbFg(PALETTE.gray);
+  const accentBadgeFg = rgbFg(PALETTE.blue);
 
-  const styledTitle = ` ${theme.bold(theme.fg(titleColor, title))} `;
-  const titleWidth = visibleWidth(styledTitle);
+  const lines: string[] = [];
 
-  const boxLines: string[] = [];
+  // Header block: solid blue background, bold dark text.
+  const titleVisible = ` ${title}`;
+  const titlePad = Math.max(0, blockWidth - titleVisible.length);
+  lines.push(headerBg + headerFg + titleVisible + " ".repeat(titlePad) + RESET);
 
-  // ┏━ Title ━━━━━━┓
-  const dashCount = Math.max(1, innerWidth - titleWidth);
-  boxLines.push("┏" + styledTitle + "━".repeat(dashCount) + "┓");
+  // Item blocks: dim background, light text.
+  for (const item of items) {
+    const row = `  ■ ${item.name}`;
+    const rowWidth = visibleWidth(row);
 
-  // Items
-  for (const item of displayItems) {
-    const bullet = theme.fg(bulletColor, "■");
-    const nameText = theme.fg("text", ` ${item.name}`);
-
-    // Scope badge — right-aligned inside the box
     let badge: string;
     if (item.scope === "npm") {
-      badge = theme.fg("accent", "[npm]");
+      badge = "[npm]";
     } else if (item.scope === "git") {
-      badge = theme.fg("accent", "[git]");
+      badge = "[git]";
     } else if (item.scope === "project") {
-      badge = theme.fg("accent", "[pr]");
+      badge = "[pr]";
     } else {
-      badge = theme.fg("dim", "[gl]");
+      badge = "[gl]";
     }
     const badgeWidth = visibleWidth(badge);
+    const padding = Math.max(1, blockWidth - rowWidth - badgeWidth - 1);
 
-    const row = `${bullet}${nameText}`;
-    const rowWidth = visibleWidth(row);
-    const padding = Math.max(1, innerWidth - rowWidth - badgeWidth - 1);
+    const badgeStyled = item.scope === "global"
+      ? dimBadgeFg + badge
+      : accentBadgeFg + badge;
 
-    boxLines.push("┃" + row + " ".repeat(padding) + badge + " ┃");
+    lines.push(
+      itemBg + itemFg + row + " ".repeat(padding) + badgeStyled + " " + RESET,
+    );
   }
 
-  // ┗━━━━━━━━━━━━━━┛
-  boxLines.push("┗" + "━".repeat(innerWidth) + "┛");
-
-  return boxLines;
+  return lines;
 }
 
 // ── HEADER CONSTRUCTION ─────────────────────────────────────────────────────
@@ -681,13 +708,13 @@ function buildResourceLines(
   const boxWidth = Math.max(4, Math.min(Math.max(1, width) - 2, MAX_BOX_WIDTH));
 
   const extLines = extensions.length > 0
-    ? renderBorderedList(theme, "Extensions", extensions, boxWidth, "mdHeading", "muted")
+    ? renderBlockList("Extensions", extensions, boxWidth)
     : [];
   const skillLines = skills.length > 0
-    ? renderBorderedList(theme, "Skills", skills, boxWidth, "accent", "dim")
+    ? renderBlockList("Skills", skills, boxWidth)
     : [];
   const ctxLines = contextFiles.length > 0
-    ? renderBorderedList(theme, "Context", contextFiles, boxWidth, "borderAccent", "muted")
+    ? renderBlockList("Context", contextFiles, boxWidth)
     : [];
 
   const sections = [extLines, skillLines, ctxLines].filter((section) => section.length > 0);
@@ -833,13 +860,13 @@ function buildHeaderLines(
   result.push(""); // spacer
 
   const skillLines = skills.length > 0
-    ? renderBorderedList(theme, "Skills", skills, boxWidth, "accent", "dim")
+    ? renderBlockList("Skills", skills, boxWidth)
     : [];
   const extLines = extensions.length > 0
-    ? renderBorderedList(theme, "Extensions", extensions, boxWidth, "mdHeading", "muted")
+    ? renderBlockList("Extensions", extensions, boxWidth)
     : [];
   const ctxLines = contextFiles.length > 0
-    ? renderBorderedList(theme, "Context", contextFiles, boxWidth, "borderAccent", "muted")
+    ? renderBlockList("Context", contextFiles, boxWidth)
     : [];
 
   if (useSideBySide) {
