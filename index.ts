@@ -34,8 +34,8 @@
  *   │                                          │
  *   └──────────────────────────────────────────┘
  *
- * (In a color terminal the headers have a solid gray background and the
- * list items have the terminal background color, so only the headers stand out as gray blocks.)
+ * (In a color terminal the headers use a Catppuccin Mocha surface background
+ * and list items use the Catppuccin Mocha base background.)
  *
  * When terminal is wide enough, the ASCII logo sits on the left and the
  * resource cards render in a single stacked column on the right. Context
@@ -154,7 +154,7 @@ interface ParsedGitSource {
 
 /** Parse a git: package source like "git:github.com/Quinus/pi-homescreen@v0.1.0" or "git:github.com/Quinus/pi-homescreen" */
 function parseGitSource(source: string): ParsedGitSource | null {
-  const match = source.match(/^git:([^\/]+)\/([^\/]+)\/([^@]+)(?:@(.+))?$/);
+  const match = source.match(/^git:([^/]+)\/([^/]+)\/([^@]+)(?:@(.+))?$/);
   if (!match) return null;
   return {
     host: match[1],
@@ -256,11 +256,7 @@ function getPackageSources(settings: Record<string, unknown>): string[] {
  * Find where an npm package is installed.
  * Checks pi-managed paths first, then legacy global npm install.
  */
-function findNpmPackagePath(
-  pkgName: string,
-  agentDir: string,
-  cwd: string,
-): string | undefined {
+function findNpmPackagePath(pkgName: string, agentDir: string, cwd: string): string | undefined {
   // 1. Pi-managed global: ~/.pi/agent/npm/node_modules/<name>
   const managedGlobal = join(agentDir, "npm", "node_modules", pkgName);
   if (existsSync(join(managedGlobal, "package.json"))) return managedGlobal;
@@ -309,7 +305,11 @@ function getPiExtensionsFromPackage(pkgDir: string): string[] {
       const dir = statSync(resolved, { throwIfNoEntry: false });
       if (!dir) continue;
       if (dir.isFile() && (entry.endsWith(".ts") || entry.endsWith(".js"))) {
-        const name = entry.split("/").pop()?.replace(/\.(ts|js)$/, "") ?? entry;
+        const name =
+          entry
+            .split("/")
+            .pop()
+            ?.replace(/\.(ts|js)$/, "") ?? entry;
         names.push(name);
       } else if (dir.isDirectory()) {
         // Directory with index.ts/js
@@ -331,7 +331,10 @@ function getPiExtensionsFromPackage(pkgDir: string): string[] {
           if (!s) continue;
           if (s.isFile() && (entry.endsWith(".ts") || entry.endsWith(".js"))) {
             names.push(entry.replace(/\.(ts|js)$/, ""));
-          } else if (s.isDirectory() && (existsSync(join(fullPath, "index.ts")) || existsSync(join(fullPath, "index.js")))) {
+          } else if (
+            s.isDirectory() &&
+            (existsSync(join(fullPath, "index.ts")) || existsSync(join(fullPath, "index.js")))
+          ) {
             names.push(entry);
           }
         }
@@ -354,14 +357,9 @@ function discoverNpmExtensions(cwd: string, agentDir: string): ResourceInfo[] {
   // Read both global and project settings
   const globalSettings = readSettings(agentDir);
   const projectSettingsDir = join(cwd, ".pi");
-  const projectSettings = existsSync(projectSettingsDir)
-    ? readSettings(projectSettingsDir)
-    : {};
+  const projectSettings = existsSync(projectSettingsDir) ? readSettings(projectSettingsDir) : {};
 
-  const sources = [
-    ...getPackageSources(globalSettings),
-    ...getPackageSources(projectSettings),
-  ];
+  const sources = [...getPackageSources(globalSettings), ...getPackageSources(projectSettings)];
 
   // Deduplicate by package name
   const seenPackages = new Set<string>();
@@ -560,16 +558,17 @@ function discoverContextFiles(cwd: string, agentDir: string): ResourceInfo[] {
   return items;
 }
 
-// ── STATUSLINE PALETTE ──────────────────────────────────────────────────────
+// ── CATPPUCCIN MOCHA PALETTE ────────────────────────────────────────────────
 
-/** Atom One Dark-inspired colors used by the user's tmux and nvim statuslines. */
+/** Catppuccin Mocha colors used throughout the homescreen. */
 const PALETTE = {
-  bg: "#282c34",
-  fg: "#abb2bf",
-  blue: "#61afef",
-  header: "#5c6370",
-  darkgray: "#282c34",
-  gray: "#5c6370",
+  base: "#1e1e2e",
+  text: "#cdd6f4",
+  blue: "#89b4fa",
+  surface2: "#585b70",
+  overlay1: "#7f849c",
+  teal: "#94e2d5",
+  sapphire: "#74c7ec",
 };
 
 const RESET = "\x1b[0m";
@@ -590,6 +589,15 @@ function rgbFg(hex: string): string {
   return `\x1b[38;2;${r};${g};${b}m`;
 }
 
+function gradientFg(startHex: string, endHex: string, t: number): string {
+  const [startR, startG, startB] = hexToRgb(startHex);
+  const [endR, endG, endB] = hexToRgb(endHex);
+  const r = Math.round(startR + t * (endR - startR));
+  const g = Math.round(startG + t * (endG - startG));
+  const b = Math.round(startB + t * (endB - startB));
+  return `\x1b[38;2;${r};${g};${b}m`;
+}
+
 // ── BLOCK-STYLE LIST RENDERING ──────────────────────────────────────────────
 
 interface ThemeColors {
@@ -600,27 +608,23 @@ interface ThemeColors {
 /**
  * Render a block-style list with no borders, inspired by tmux/lualine segments:
  *
- *   [gray]  Title                       [reset]
- *   [term]    item 1              [gl]  [reset]
- *   [term]    item 2              [pr]  [reset]
+ *   [surface]  Title                    [reset]
+ *   [base]       item 1           [gl]   [reset]
+ *   [base]       item 2           [pr]   [reset]
  */
-function renderBlockList(
-  title: string,
-  items: ResourceInfo[],
-  blockWidth: number,
-): string[] {
+function renderBlockList(title: string, items: ResourceInfo[], blockWidth: number): string[] {
   if (items.length === 0) return [];
 
-  const headerBg = rgbBg(PALETTE.header);
-  const headerFg = rgbFg(PALETTE.bg) + BOLD;
-  const itemBg = rgbBg(PALETTE.darkgray);
-  const itemFg = rgbFg(PALETTE.fg);
-  const dimBadgeFg = rgbFg(PALETTE.gray);
+  const headerBg = rgbBg(PALETTE.surface2);
+  const headerFg = rgbFg(PALETTE.base) + BOLD;
+  const itemBg = rgbBg(PALETTE.base);
+  const itemFg = rgbFg(PALETTE.text);
+  const dimBadgeFg = rgbFg(PALETTE.overlay1);
   const accentBadgeFg = rgbFg(PALETTE.blue);
 
   const lines: string[] = [];
 
-  // Header block: solid gray background, bold dark text.
+  // Header block: solid surface background, bold base-colored text.
   const titleVisible = ` ${title}`;
   const titlePad = Math.max(0, blockWidth - titleVisible.length);
   lines.push(headerBg + headerFg + titleVisible + " ".repeat(titlePad) + RESET);
@@ -643,13 +647,9 @@ function renderBlockList(
     const badgeWidth = visibleWidth(badge);
     const padding = Math.max(1, blockWidth - rowWidth - badgeWidth - 1);
 
-    const badgeStyled = item.scope === "global"
-      ? dimBadgeFg + badge
-      : accentBadgeFg + badge;
+    const badgeStyled = item.scope === "global" ? dimBadgeFg + badge : accentBadgeFg + badge;
 
-    lines.push(
-      itemBg + itemFg + row + " ".repeat(padding) + badgeStyled + " " + RESET,
-    );
+    lines.push(itemBg + itemFg + row + " ".repeat(padding) + badgeStyled + " " + RESET);
   }
 
   return lines;
@@ -666,10 +666,7 @@ const MIN_SIDE_BY_SIDE_BOX_WIDTH = 36;
 /** Render the PI logo, optionally centered or left-aligned inside a column. */
 function renderLogoLines(theme: ThemeColors, width: number, align: "center" | "left"): string[] {
   const maxLogoWidth = Math.max(...LOGO.map((line) => line.length));
-  const padding =
-    align === "center"
-      ? Math.max(0, Math.floor((width - maxLogoWidth) / 2))
-      : 0;
+  const padding = align === "center" ? Math.max(0, Math.floor((width - maxLogoWidth) / 2)) : 0;
   const leftPad = " ".repeat(padding);
   const chunkSize = 4;
 
@@ -686,11 +683,8 @@ function renderLogoLines(theme: ThemeColors, width: number, align: "center" | "l
         const phase = ((chunkRow * 7919 + chunkCol * 104729) & 0x7fffffff) / 100000;
         // Smooth gradient based on position only (no animation)
         const t = (Math.sin(phase) + 1) / 2;
-        // Interpolate between cyan (0,200,200) and blue (80,120,255)
-        const r = Math.round(0 + t * 80);
-        const g = Math.round(200 + t * (120 - 200));
-        const b = Math.round(200 + t * (255 - 200));
-        return `\x1b[38;2;${r};${g};${b}m${char}\x1b[39m`;
+        // Interpolate between Catppuccin teal and sapphire.
+        return gradientFg(PALETTE.teal, PALETTE.sapphire, t) + char + "\x1b[39m";
       })
       .join("");
     return leftPad + renderedLine;
@@ -708,15 +702,10 @@ function buildResourceLines(
   const lines: string[] = [];
   const boxWidth = Math.max(4, Math.min(Math.max(1, width) - 2, MAX_BOX_WIDTH));
 
-  const extLines = extensions.length > 0
-    ? renderBlockList("Extensions", extensions, boxWidth)
-    : [];
-  const skillLines = skills.length > 0
-    ? renderBlockList("Skills", skills, boxWidth)
-    : [];
-  const ctxLines = contextFiles.length > 0
-    ? renderBlockList("Context", contextFiles, boxWidth)
-    : [];
+  const extLines = extensions.length > 0 ? renderBlockList("Extensions", extensions, boxWidth) : [];
+  const skillLines = skills.length > 0 ? renderBlockList("Skills", skills, boxWidth) : [];
+  const ctxLines =
+    contextFiles.length > 0 ? renderBlockList("Context", contextFiles, boxWidth) : [];
 
   const sections = [extLines, skillLines, ctxLines].filter((section) => section.length > 0);
   sections.forEach((section, index) => {
@@ -764,7 +753,9 @@ function buildHeaderLines(
   // ── Current folder and model ──
   const folderName = cwd.split("/").filter(Boolean).pop() || "~";
   const modelInfo = model ? `using ${model}` : "";
-  const subtitle = theme.bold(theme.fg("borderAccent", folderName)) + (modelInfo ? "  " + theme.fg("text", modelInfo) : "");
+  const subtitle =
+    theme.bold(theme.fg("borderAccent", folderName)) +
+    (modelInfo ? "  " + theme.fg("text", modelInfo) : "");
   const subWidth = visibleWidth(subtitle);
   const leftPanelWidth = Math.max(logoWidth, subWidth);
   const resourceWidth = Math.max(1, Math.min(width - leftPanelWidth - BOX_GAP - 4, MAX_BOX_WIDTH));
@@ -776,34 +767,48 @@ function buildHeaderLines(
       "",
       " ".repeat(Math.max(0, Math.floor((leftPanelWidth - subWidth) / 2))) + subtitle,
     ];
-    const resourceLines = buildResourceLines(theme, resourceWidth, skills, extensions, contextFiles);
+    const resourceLines = buildResourceLines(
+      theme,
+      resourceWidth,
+      skills,
+      extensions,
+      contextFiles,
+    );
 
     // Vertically center both blocks relative to each other
     const heightDiff = Math.abs(resourceLines.length - logoBlockLines.length);
     const topPad = Math.floor(heightDiff / 2);
     const bottomPad = heightDiff - topPad;
 
-    const leftLines = resourceLines.length >= logoBlockLines.length
-      ? [
-          ...Array(topPad).fill(" ".repeat(leftPanelWidth)),
-          ...logoBlockLines,
-          ...Array(bottomPad).fill(" ".repeat(leftPanelWidth)),
-        ]
-      : [...logoBlockLines];
+    const leftLines =
+      resourceLines.length >= logoBlockLines.length
+        ? [
+            ...Array(topPad).fill(" ".repeat(leftPanelWidth)),
+            ...logoBlockLines,
+            ...Array(bottomPad).fill(" ".repeat(leftPanelWidth)),
+          ]
+        : [...logoBlockLines];
 
-    const rightLines = logoBlockLines.length > resourceLines.length
-      ? [
-          ...Array(topPad).fill(" ".repeat(resourceWidth)),
-          ...resourceLines,
-          ...Array(bottomPad).fill(" ".repeat(resourceWidth)),
-        ]
-      : [...resourceLines];
+    const rightLines =
+      logoBlockLines.length > resourceLines.length
+        ? [
+            ...Array(topPad).fill(" ".repeat(resourceWidth)),
+            ...resourceLines,
+            ...Array(bottomPad).fill(" ".repeat(resourceWidth)),
+          ]
+        : [...resourceLines];
 
     const combinedWidth = leftPanelWidth + BOX_GAP + resourceWidth;
     const leftPad = Math.max(0, Math.floor((width - combinedWidth) / 2));
 
     result.push("");
-    const combined = sideBySide(leftLines, rightLines, leftPanelWidth, resourceWidth, " ".repeat(BOX_GAP));
+    const combined = sideBySide(
+      leftLines,
+      rightLines,
+      leftPanelWidth,
+      resourceWidth,
+      " ".repeat(BOX_GAP),
+    );
     for (const line of combined) {
       result.push(" ".repeat(leftPad) + line);
     }
@@ -813,7 +818,8 @@ function buildHeaderLines(
   }
 
   // Decide layout: side-by-side when wide enough, stacked otherwise
-  const useSideBySide = width >= SIDE_BY_SIDE_THRESHOLD && skills.length > 0 && extensions.length > 0;
+  const useSideBySide =
+    width >= SIDE_BY_SIDE_THRESHOLD && skills.length > 0 && extensions.length > 0;
   const boxWidth = useSideBySide
     ? Math.min(Math.floor((width - BOX_GAP - 4) / 2), MAX_BOX_WIDTH)
     : Math.min(width - 4, MAX_BOX_WIDTH);
@@ -825,7 +831,7 @@ function buildHeaderLines(
   result.push("");
 
   // ── PI ASCII logo (centered) with interpolated color per square chunk ──
-  const maxLogoWidth = Math.max(...LOGO.map(l => l.length));
+  const maxLogoWidth = Math.max(...LOGO.map((l) => l.length));
   const chunkSize = 4;
   for (let i = 0; i < LOGO.length; i++) {
     const line = LOGO[i];
@@ -842,11 +848,8 @@ function buildHeaderLines(
         const phase = ((chunkRow * 7919 + chunkCol * 104729) & 0x7fffffff) / 100000;
         // Smooth gradient based on position only (no animation)
         const t = (Math.sin(phase) + 1) / 2;
-        // Interpolate between cyan (0,200,200) and blue (80,120,255)
-        const r = Math.round(0 + t * 80);
-        const g = Math.round(200 + t * (120 - 200));
-        const b = Math.round(200 + t * (255 - 200));
-        return `[38;2;${r};${g};${b}m${char}[39m`;
+        // Interpolate between Catppuccin teal and sapphire.
+        return gradientFg(PALETTE.teal, PALETTE.sapphire, t) + char + "\x1b[39m";
       })
       .join("");
     result.push(" ".repeat(padding) + renderedLine);
@@ -860,15 +863,10 @@ function buildHeaderLines(
 
   result.push(""); // spacer
 
-  const skillLines = skills.length > 0
-    ? renderBlockList("Skills", skills, boxWidth)
-    : [];
-  const extLines = extensions.length > 0
-    ? renderBlockList("Extensions", extensions, boxWidth)
-    : [];
-  const ctxLines = contextFiles.length > 0
-    ? renderBlockList("Context", contextFiles, boxWidth)
-    : [];
+  const skillLines = skills.length > 0 ? renderBlockList("Skills", skills, boxWidth) : [];
+  const extLines = extensions.length > 0 ? renderBlockList("Extensions", extensions, boxWidth) : [];
+  const ctxLines =
+    contextFiles.length > 0 ? renderBlockList("Context", contextFiles, boxWidth) : [];
 
   if (useSideBySide) {
     // ── Side-by-side layout ──
@@ -951,7 +949,15 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setHeader((tui: { requestRender: () => void }, theme: ThemeColors) => {
       return {
         render(width: number): string[] {
-          return buildHeaderLines(theme, width, cachedSkills, cachedExtensions, cachedContextFiles, currentCwd, modelStr);
+          return buildHeaderLines(
+            theme,
+            width,
+            cachedSkills,
+            cachedExtensions,
+            cachedContextFiles,
+            currentCwd,
+            modelStr,
+          );
         },
         invalidate() {},
         dispose() {},
