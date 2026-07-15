@@ -34,8 +34,8 @@
  *   │                                          │
  *   └──────────────────────────────────────────┘
  *
- * (In a color terminal the headers use a Catppuccin Mocha surface background
- * and list items use the Catppuccin Mocha base background.)
+ * (In a color terminal the headers use the theme's selectedBg background
+ * and list items use the theme's userMessageBg background.)
  *
  * When terminal is wide enough, the ASCII logo sits on the left and the
  * resource cards render in a single stacked column on the right. Context
@@ -558,18 +558,7 @@ function discoverContextFiles(cwd: string, agentDir: string): ResourceInfo[] {
   return items;
 }
 
-// ── CATPPUCCIN MOCHA PALETTE ────────────────────────────────────────────────
-
-/** Catppuccin Mocha colors used throughout the homescreen. */
-const PALETTE = {
-  base: "#1e1e2e",
-  text: "#cdd6f4",
-  blue: "#89b4fa",
-  surface2: "#585b70",
-  overlay1: "#7f849c",
-  teal: "#94e2d5",
-  sapphire: "#74c7ec",
-};
+// ── ANSI HELPERS ───────────────────────────────────────────────────────────
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -584,11 +573,6 @@ function rgbBg(hex: string): string {
   return `\x1b[48;2;${r};${g};${b}m`;
 }
 
-function rgbFg(hex: string): string {
-  const [r, g, b] = hexToRgb(hex);
-  return `\x1b[38;2;${r};${g};${b}m`;
-}
-
 function gradientFg(startHex: string, endHex: string, t: number): string {
   const [startR, startG, startB] = hexToRgb(startHex);
   const [endR, endG, endB] = hexToRgb(endHex);
@@ -598,11 +582,33 @@ function gradientFg(startHex: string, endHex: string, t: number): string {
   return `\x1b[38;2;${r};${g};${b}m`;
 }
 
+/** Extract the resolved hex color from an ANSI fg escape sequence. */
+function ansiToHex(ansi: string): string {
+  const m = ansi.match(/\x1b\[38;2;(\d+);(\d+);(\d+)m/);
+  if (m) {
+    return `#${[m[1], m[2], m[3]].map((c) => parseInt(c).toString(16).padStart(2, "0")).join("")}`;
+  }
+  return "";
+}
+
+/** Get the resolved hex for a theme fg color token. */
+function resolveFg(theme: ThemeColors, color: string): string {
+  return ansiToHex(theme.getFgAnsi(color));
+}
+
+/** Get the resolved hex for a theme bg color token. */
+function resolveBg(theme: ThemeColors, color: string): string {
+  return ansiToHex(theme.getBgAnsi(color));
+}
+
 // ── BLOCK-STYLE LIST RENDERING ──────────────────────────────────────────────
 
 interface ThemeColors {
   fg: (color: string, text: string) => string;
+  bg: (color: string, text: string) => string;
   bold: (text: string) => string;
+  getFgAnsi: (color: string) => string;
+  getBgAnsi: (color: string) => string;
 }
 
 /**
@@ -612,15 +618,15 @@ interface ThemeColors {
  *   [base]       item 1           [gl]   [reset]
  *   [base]       item 2           [pr]   [reset]
  */
-function renderBlockList(title: string, items: ResourceInfo[], blockWidth: number): string[] {
+function renderBlockList(theme: ThemeColors, title: string, items: ResourceInfo[], blockWidth: number): string[] {
   if (items.length === 0) return [];
 
-  const headerBg = rgbBg(PALETTE.surface2);
-  const headerFg = rgbFg(PALETTE.base) + BOLD;
-  const itemBg = rgbBg(PALETTE.base);
-  const itemFg = rgbFg(PALETTE.text);
-  const dimBadgeFg = rgbFg(PALETTE.overlay1);
-  const accentBadgeFg = rgbFg(PALETTE.blue);
+  const headerBg = rgbBg(resolveBg(theme, "selectedBg"));
+  const headerFg = theme.getFgAnsi("text") + BOLD;
+  const itemBg = rgbBg(resolveBg(theme, "userMessageBg"));
+  const itemFg = theme.getFgAnsi("text");
+  const dimBadgeFg = theme.getFgAnsi("muted");
+  const accentBadgeFg = theme.getFgAnsi("accent");
 
   const lines: string[] = [];
 
@@ -669,6 +675,8 @@ function renderLogoLines(theme: ThemeColors, width: number, align: "center" | "l
   const padding = align === "center" ? Math.max(0, Math.floor((width - maxLogoWidth) / 2)) : 0;
   const leftPad = " ".repeat(padding);
   const chunkSize = 4;
+  const accentHex = resolveFg(theme, "accent");
+  const borderAccentHex = resolveFg(theme, "borderAccent");
 
   return LOGO.map((line, i) => {
     const renderedLine = line
@@ -683,8 +691,8 @@ function renderLogoLines(theme: ThemeColors, width: number, align: "center" | "l
         const phase = ((chunkRow * 7919 + chunkCol * 104729) & 0x7fffffff) / 100000;
         // Smooth gradient based on position only (no animation)
         const t = (Math.sin(phase) + 1) / 2;
-        // Interpolate between Catppuccin teal and sapphire.
-        return gradientFg(PALETTE.teal, PALETTE.sapphire, t) + char + "\x1b[39m";
+        // Interpolate between accent and borderAccent from the theme.
+        return gradientFg(accentHex, borderAccentHex, t) + char + "\x1b[39m";
       })
       .join("");
     return leftPad + renderedLine;
@@ -702,10 +710,10 @@ function buildResourceLines(
   const lines: string[] = [];
   const boxWidth = Math.max(4, Math.min(Math.max(1, width) - 2, MAX_BOX_WIDTH));
 
-  const extLines = extensions.length > 0 ? renderBlockList("Extensions", extensions, boxWidth) : [];
-  const skillLines = skills.length > 0 ? renderBlockList("Skills", skills, boxWidth) : [];
+  const extLines = extensions.length > 0 ? renderBlockList(theme, "Extensions", extensions, boxWidth) : [];
+  const skillLines = skills.length > 0 ? renderBlockList(theme, "Skills", skills, boxWidth) : [];
   const ctxLines =
-    contextFiles.length > 0 ? renderBlockList("Context", contextFiles, boxWidth) : [];
+    contextFiles.length > 0 ? renderBlockList(theme, "Context", contextFiles, boxWidth) : [];
 
   const sections = [extLines, skillLines, ctxLines].filter((section) => section.length > 0);
   sections.forEach((section, index) => {
@@ -833,6 +841,8 @@ function buildHeaderLines(
   // ── PI ASCII logo (centered) with interpolated color per square chunk ──
   const maxLogoWidth = Math.max(...LOGO.map((l) => l.length));
   const chunkSize = 4;
+  const logoAccentHex = resolveFg(theme, "accent");
+  const logoBorderAccentHex = resolveFg(theme, "borderAccent");
   for (let i = 0; i < LOGO.length; i++) {
     const line = LOGO[i];
     const padding = Math.max(0, Math.floor((width - maxLogoWidth) / 2));
@@ -848,8 +858,8 @@ function buildHeaderLines(
         const phase = ((chunkRow * 7919 + chunkCol * 104729) & 0x7fffffff) / 100000;
         // Smooth gradient based on position only (no animation)
         const t = (Math.sin(phase) + 1) / 2;
-        // Interpolate between Catppuccin teal and sapphire.
-        return gradientFg(PALETTE.teal, PALETTE.sapphire, t) + char + "\x1b[39m";
+        // Interpolate between accent and borderAccent from the theme.
+        return gradientFg(logoAccentHex, logoBorderAccentHex, t) + char + "\x1b[39m";
       })
       .join("");
     result.push(" ".repeat(padding) + renderedLine);
@@ -863,10 +873,10 @@ function buildHeaderLines(
 
   result.push(""); // spacer
 
-  const skillLines = skills.length > 0 ? renderBlockList("Skills", skills, boxWidth) : [];
-  const extLines = extensions.length > 0 ? renderBlockList("Extensions", extensions, boxWidth) : [];
+  const skillLines = skills.length > 0 ? renderBlockList(theme, "Skills", skills, boxWidth) : [];
+  const extLines = extensions.length > 0 ? renderBlockList(theme, "Extensions", extensions, boxWidth) : [];
   const ctxLines =
-    contextFiles.length > 0 ? renderBlockList("Context", contextFiles, boxWidth) : [];
+    contextFiles.length > 0 ? renderBlockList(theme, "Context", contextFiles, boxWidth) : [];
 
   if (useSideBySide) {
     // ── Side-by-side layout ──

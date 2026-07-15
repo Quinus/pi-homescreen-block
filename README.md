@@ -11,9 +11,10 @@ This extension replaces the default startup header with a branded QUINUS splash 
 
 The resource lists use a solid-block style inspired by tmux and nvim statuslines:
 
-- section headers use a solid Catppuccin Mocha **surface** background
-- list items use the Catppuccin Mocha **base** background
-- badges and the logo use Catppuccin accent colors
+- section headers use the theme's **selectedBg** background
+- list items use the theme's **userMessageBg** background
+- badges use the theme's **accent** and **muted** colors
+- the logo gradients between the theme's **accent** and **borderAccent** colors
 - no borders
 
 It also enables `quietStartup` in Pi's settings so the built-in startup resource list does not duplicate the custom header.
@@ -60,8 +61,8 @@ On wide terminals, the ASCII logo sits on the left and the resource blocks rende
 ────────────────────────────────────────────────────────────────────────────────
 ```
 
-(In a color terminal the headers use the Catppuccin Mocha surface2 color;
-list items use the Catppuccin Mocha base color.)
+(In a color terminal the headers use the theme's selectedBg background;
+list items use the theme's userMessageBg background.)
 
 - `/logo` — show or hide the homescreen
 - `/resources` — show the currently discovered skills and extensions
