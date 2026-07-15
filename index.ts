@@ -791,19 +791,19 @@ function buildHeaderLines(
     const leftLines =
       resourceLines.length >= logoBlockLines.length
         ? [
-            ...Array(topPad).fill(" ".repeat(leftPanelWidth)),
-            ...logoBlockLines,
-            ...Array(bottomPad).fill(" ".repeat(leftPanelWidth)),
-          ]
+          ...Array(topPad).fill(" ".repeat(leftPanelWidth)),
+          ...logoBlockLines,
+          ...Array(bottomPad).fill(" ".repeat(leftPanelWidth)),
+        ]
         : [...logoBlockLines];
 
     const rightLines =
       logoBlockLines.length > resourceLines.length
         ? [
-            ...Array(topPad).fill(" ".repeat(resourceWidth)),
-            ...resourceLines,
-            ...Array(bottomPad).fill(" ".repeat(resourceWidth)),
-          ]
+          ...Array(topPad).fill(" ".repeat(resourceWidth)),
+          ...resourceLines,
+          ...Array(bottomPad).fill(" ".repeat(resourceWidth)),
+        ]
         : [...resourceLines];
 
     const combinedWidth = leftPanelWidth + BOX_GAP + resourceWidth;
@@ -907,9 +907,6 @@ function buildHeaderLines(
     if (ctxLines.length > 0) result.push("");
   }
 
-  // ── Full-width separator ──
-  result.push(theme.fg("border", "─".repeat(Math.max(1, width))));
-
   return result;
 }
 
@@ -969,8 +966,8 @@ export default function (pi: ExtensionAPI) {
             modelStr,
           );
         },
-        invalidate() {},
-        dispose() {},
+        invalidate() { },
+        dispose() { },
       };
     });
   }
